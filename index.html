@@ -22,6 +22,14 @@ input,select,textarea{width:100%;padding:13px;border:1px solid #e5d9d5;border-ra
 .settleHero{background:linear-gradient(135deg,#fff,#eef8e9)}.bigcalc{font-size:27px;font-weight:850;margin:6px 0}.sharebox{white-space:pre-wrap;background:#fff;border:1px dashed #ddcfca;border-radius:15px;padding:13px;font-size:14px;line-height:1.65}
 .badgeCard{background:#fff0d9;color:#9b6a1c}.badgeBank{background:#e9f2fb;color:#55758e}.badgeDone{background:#e8f5e5;color:#4f8554}
 .mini{font-size:12px;color:var(--muted)}
+
+/* v4.5.1 — iPhone date fields: prevent native inputs overflowing cards */
+*,*::before,*::after{box-sizing:border-box}
+.card,.grid2,.grid2>div,#singleMonth,#customRange{min-width:0;max-width:100%}
+input,select,textarea{display:block;min-width:0;max-width:100%;box-sizing:border-box}
+input[type="date"],input[type="month"]{width:100%;min-width:0;max-width:100%;height:50px;padding:10px 12px;-webkit-appearance:none;appearance:none;font-family:inherit;font-size:16px}
+#customRange{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:480px){#customRange{grid-template-columns:minmax(0,1fr)}#customRange input{margin-bottom:8px}}
 </style></head>
 <body><div class="app">
 <div class="top"><h1>宣的專款帳本 ♡</h1><span>⚙️</span></div>
@@ -50,7 +58,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid #e5d9d5;border-ra
 <div class="sectionTitle">記帳紀錄</div>
 <div class="card"><div class="monthTotal" id="monthTotal"></div><div class="small">本月實際由帳戶支出</div></div>
 <div class="filterbar"><button id="fAll" class="on" onclick="setRecordFilter('all',this)">全部</button><button onclick="setRecordFilter('reserve',this)">只看固存</button><button onclick="setRecordFilter('card',this)">信用卡代墊</button><button onclick="setRecordFilter('bike',this)">機車</button></div>
-<div class="card"><label>明細期間</label><select id="rangeMode" onchange="updateRangeMode()"><option value="month">單月</option><option value="range">自訂日期區間</option><option value="all">全部歷史</option></select><div id="singleMonth"><input id="viewMonth" type="month" onchange="renderRecords()"></div><div id="customRange" class="grid2" style="display:none"><div><label>開始</label><input id="rangeStart" type="date" onchange="renderRecords()"></div><div><label>結束</label><input id="rangeEnd" type="date" onchange="renderRecords()"></div></div><div class="small" id="rangeSummary"></div></div><div class="card" id="recordList"></div></section>
+<div class="card"><label>明細期間</label><select id="rangeMode" onchange="updateRangeMode()"><option value="month">單月</option><option value="range">自訂日期區間</option><option value="all">全部歷史</option></select><div id="singleMonth"><input id="viewMonth" type="month" onchange="renderRecords()"></div><div id="customRange" class="grid2" style="display:none"><div><label>開始</label><input id="rangeStart" type="date" onchange="renderRecords()"></div><div><label>結束</label><input id="rangeEnd" type="date" onchange="renderRecords()"></div></div><div class="small" id="rangeSummary"></div></div><div class="card"><label>歷史查詢依據</label><select id="historyDateMode" onchange="renderRecords()"><option value="settlement">結算歸屬月份（Excel 原工作表）</option><option value="purchase">實際消費日期</option></select><div class="small">歷史補登不影響現有餘額、代墊結算或帳戶收支統計。</div></div><div class="card" id="recordList"></div></section>
 
 <section id="loans" class="page"><div class="hero"><div class="label">🌸 阿霓專款｜借還款管理</div><div class="balance" id="loanOutstanding">$0</div><div class="small">尚未歸還阿霓的金額（不含其他支出）</div></div><button class="primary" onclick="openLoan()">＋ 登記借款</button><div class="note">借款可以連結已記錄的阿霓專款支出，避免重複扣款。還款會自動存回阿霓專款，不重複列為消費。</div><div class="sectionTitle">借還款紀錄</div><div id="loanList"></div></section>
 <section id="settlement" class="page">
@@ -75,7 +83,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid #e5d9d5;border-ra
 </section>
 
 <section id="settings" class="page">
-<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.4｜新增阿霓專款借還管理及跨月份明細查詢。</div>
+<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.5｜新增阿霓專款借還管理及跨月份明細查詢。</div>
 <div class="card"><label>銀行實際餘額（核帳用）</label><input id="bankActual" type="number" inputmode="decimal"><button class="primary" onclick="saveActual()">更新實際餘額</button></div>
 <div class="card"><b>備份與還原</b><p class="small">資料存在這台裝置的瀏覽器，建議定期匯出備份。</p><div class="grid2"><button class="secondary" onclick="backup()">匯出備份</button><button class="secondary" onclick="restoreFile.click()">匯入備份</button></div><input id="restoreFile" type="file" accept=".json" style="display:none" onchange="restore(event)"></div>
 <button class="danger" onclick="resetAll()">重設為起始資料</button>
@@ -119,6 +127,7 @@ function migrate(d){
   if(!d.reserveBase)d.reserveBase=11000;
   if(!Array.isArray(d.records))d.records=[];
   if(!Array.isArray(d.loans))d.loans=[];
+  if(!Array.isArray(d.historicalRecords))d.historicalRecords=[];
   if(!Array.isArray(d.creditRecords))d.creditRecords=[];
   if(!d.creditHistorySeeded&&d.creditRecords.length===0){
     d.creditRecords=[{date:'2026-08-05',amount:320,memo:'阿咩洗澡'},{date:'2026-08-05',amount:3718,memo:'學費'},{date:'2026-08-05',amount:1797,memo:'萬家福食材'},{date:'2026-08-05',amount:547,memo:'萬家福湯飯'},{date:'2026-08-05',amount:680,memo:'Uber Eats'},{date:'2026-08-05',amount:173,memo:'髮泥'},{date:'2026-09-14',amount:252,memo:'Uber Eats'},{date:'2026-09-17',amount:588,memo:'Uber Eats（全聯）'},{date:'2026-09-24',amount:159,memo:'Uber Eats'},{date:'2026-10-04',amount:167,memo:'Uber Eats'}];
@@ -179,23 +188,29 @@ function renderRecords(){
  let rows=data.records.map((r,i)=>({...r,_i:i})).filter(r=>recordMatches(r)&&recordInRange(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b._i-a._i);
  let spend=rows.filter(r=>r.type==='expense'&&!['card','cash'].includes(r.paymentMethod)).reduce((a,r)=>a+(+r.amount||0),0);
  let income=rows.filter(r=>r.type==='income').reduce((a,r)=>a+(+r.amount||0),0);
- rangeSummary.textContent=`顯示 ${rows.length} 筆｜帳戶支出 ${money(spend)}｜帳戶收入 ${money(income)}（含還款）`;
- recordList.innerHTML=rows.length?rows.map(r=>{
+ let history=(data.historicalRecords||[]).filter(r=>recordMatches({...r,wallet:'reserve',type:'expense',paymentMethod:'history'})&&historicalInRange(r)).sort((a,b)=>(b.settlementMonth||'').localeCompare(a.settlementMonth||'')||(b.date||'').localeCompare(a.date||''));
+ let historyTotal=history.reduce((a,r)=>a+(+r.amount||0),0);
+ rangeSummary.textContent=`現有 ${rows.length} 筆｜帳戶支出 ${money(spend)}｜帳戶收入 ${money(income)}（含還款）｜歷史補登 ${history.length} 筆 ${money(historyTotal)}（不扣款）`;
+ let normal=rows.map(r=>{
    let badge=r.wallet==='reserve'&&r.type==='expense'?(r.paymentMethod==='card'?'<span class="pill badgeCard">信用卡代墊</span>':r.paymentMethod==='cash'?'<span class="pill badgeCard">💵 現金代墊</span>':'<span class="pill badgeBank">帳戶扣款</span>'):'';
    if(r.loanId||r.repaymentLoanId)badge+='<span class="pill">🌸 借還關聯</span>';
    let walletText=r.wallet?'｜'+(w(r.wallet)?.name||''):'';
    let amountPrefix=r.type==='expense'?'-':r.type==='income'?'+':'';
    let amtClass=r.type==='expense'?'neg':r.type==='income'?'pos':'';
    return `<div class="row"><div class="grow"><b>${r.type==='transfer'?'↔️':r.type==='expense'?'🧾':'💰'} ${escapeHTML(r.memo||'未命名')}</b> ${badge}<div class="small">${r.date}${walletText}${r.reserveItem?' → '+escapeHTML(r.reserveItem):''}</div><div class="actions">${r.loanId||r.repaymentLoanId?'<span class="small">請至借還頁管理</span>':`<button class="secondary" onclick="editRecord(${r._i})">修改</button><button class="danger" onclick="deleteRecord(${r._i})">刪除</button>`}</div></div><b class="money ${amtClass}">${amountPrefix}${money(r.amount)}</b></div>`
- }).join(''):'<div class="empty">這個期間沒有紀錄 🌷</div>';
+ }).join('');
+ let historic=history.map(r=>`<div class="row"><div class="grow"><b>📜 ${escapeHTML(r.memo)}</b> <span class="pill">歷史補登｜不扣款</span><div class="small">${escapeHTML(r.settlementMonth)} 結算｜原日期 ${escapeHTML(r.date||r.originalDate||'未記載')}｜${escapeHTML(r.category)}</div></div><b class="money neg">-${money(r.amount)}</b></div>`).join('');
+ recordList.innerHTML=(normal+historic)||'<div class="empty">這個期間沒有紀錄 🌷</div>';
 }
+function historicalInRange(r){let d=historyDateMode.value==='purchase'?r.date:r.settlementMonth;if(!d)return rangeMode.value==='all';if(rangeMode.value==='all')return true;if(rangeMode.value==='month')return d.startsWith(viewMonth.value);return (!rangeStart.value||d>=rangeStart.value.slice(0,historyDateMode.value==='purchase'?10:7))&&(!rangeEnd.value||d<=rangeEnd.value.slice(0,historyDateMode.value==='purchase'?10:7))}
+
 function escapeHTML(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function setRecordFilter(f,btn){recordFilter=f;document.querySelectorAll('.filterbar button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');renderRecords()}
 function loanPaid(l){return (l.repayments||[]).reduce((sum,r)=>sum+(+r.amount||0),0)}
 function loanDue(l){return Math.max(0,(+l.amount||0)-loanPaid(l))}
 function renderLoans(){
  loanOutstanding.textContent=money((data.loans||[]).reduce((sum,l)=>sum+loanDue(l),0));
- loanList.innerHTML=data.loans.length?data.loans.slice().reverse().map(l=>`<div class="card"><b>${escapeHTML(l.memo)}</b><div class="small">借款日期 ${l.date}｜原借 ${money(l.amount)}</div><div class="row"><div class="grow">已還 ${money(loanPaid(l))}</div><b class="${loanDue(l)?'bad':'ok'}">${loanDue(l)?'尚欠 '+money(loanDue(l)):'已還清 ✓'}</b></div>${(l.repayments||[]).map(r=>`<div class="small">↳ ${r.date} 歸還 ${money(r.amount)} ${escapeHTML(r.memo||'')}</div>`).join('')}<div class="actions">${loanDue(l)?`<button class="secondary" onclick="openRepayment('${l.id}')">＋ 還款</button>`:''}<button class="danger" onclick="deleteLoan('${l.id}')">刪除借款</button></div></div>`).join(''):'<div class="card empty">尚無借款紀錄</div>';
+ loanList.innerHTML=data.loans.length?data.loans.slice().reverse().map(l=>`<div class="card"><b>${escapeHTML(l.memo)}</b><div class="small">借款日期 ${escapeHTML(l.dateLabel||l.date||'日期未確認')}｜原借 ${money(l.amount)}</div><div class="row"><div class="grow">已還 ${money(loanPaid(l))}</div><b class="${loanDue(l)?'bad':'ok'}">${loanDue(l)?'尚欠 '+money(loanDue(l)):'已還清 ✓'}</b></div>${(l.repayments||[]).map(r=>`<div class="small">↳ ${r.date} 歸還 ${money(r.amount)} ${escapeHTML(r.memo||'')}</div>`).join('')}<div class="actions">${loanDue(l)?`<button class="secondary" onclick="openRepayment('${l.id}')">＋ 還款</button>`:''}<button class="danger" onclick="deleteLoan('${l.id}')">刪除借款</button></div></div>`).join(''):'<div class="card empty">尚無借款紀錄</div>';
 }
 function openLoan(){loanDate.value=localISODate();loanAmount.value='';loanMemo.value='';loanSource.value='new';let used=new Set(data.loans.map(l=>l.expenseId));let options=data.records.map((r,i)=>({r,i})).filter(x=>x.r.type==='expense'&&x.r.wallet==='nini'&&!used.has(x.r.id)&&!x.r.loanId);loanExisting.innerHTML=options.map(x=>`<option value="${x.i}">${x.r.date}｜${escapeHTML(x.r.memo)}｜${money(x.r.amount)}</option>`).join('');loanSource.options[1].disabled=!options.length;toggleLoanSource();loanModal.classList.add('on')}
 function toggleLoanSource(){loanExistingWrap.style.display=loanSource.value==='existing'?'block':'none';if(loanSource.value==='existing')syncExistingLoan()}
@@ -206,7 +221,7 @@ function saveLoan(){let a=+loanAmount.value,d=loanDate.value,m=loanMemo.value.tr
  data.loans.push({id,date:d,amount:a,memo:m||'阿霓專款借款',expenseId,repayments:[]});loanModal.classList.remove('on');persist()}
 function openRepayment(id){let l=data.loans.find(x=>x.id===id);if(!l)return;repayLoanId=id;repayDate.value=localISODate();repayAmount.value='';repayMemo.value='';repayRemaining.textContent=`尚欠 ${money(loanDue(l))}`;repayModal.classList.add('on')}
 function saveRepayment(){let l=data.loans.find(x=>x.id===repayLoanId),a=+repayAmount.value;if(!l||!Number.isFinite(a)||a<=0||a>loanDue(l)||!repayDate.value)return alert('還款金額需大於0、不得超過未還金額，並請填日期');let r={id:'repay'+Date.now(),type:'income',wallet:'nini',amount:a,date:repayDate.value,memo:repayMemo.value.trim()||'歸還阿霓專款',repaymentLoanId:l.id};applyRecord(r);data.records.push(r);l.repayments.push({id:r.id,date:r.date,amount:a,memo:r.memo});repayModal.classList.remove('on');persist()}
-function deleteLoan(id){let l=data.loans.find(x=>x.id===id);if(!l)return;if(!confirm('確定刪除這筆借款？關聯的學費支出會保留；已登記的還款也會保留為一般收入，請自行確認帳目。'))return;let r=data.records.find(x=>x.id===l.expenseId);if(r)delete r.loanId;for(let p of l.repayments){let rr=data.records.find(x=>x.id===p.id);if(rr)delete rr.repaymentLoanId}data.loans=data.loans.filter(x=>x.id!==id);persist()}
+function deleteLoan(id){let l=data.loans.find(x=>x.id===id);if(!l)return;if(!confirm(l.historical?'確定刪除歷史借款紀錄？這不會影響帳戶餘額，但已登記還款仍會保留。':'確定刪除這筆借款？關聯的學費支出會保留；已登記的還款也會保留為一般收入，請自行確認帳目。'))return;let r=data.records.find(x=>x.id===l.expenseId);if(r)delete r.loanId;for(let p of l.repayments){let rr=data.records.find(x=>x.id===p.id);if(rr)delete rr.repaymentLoanId}data.loans=data.loans.filter(x=>x.id!==id);persist()}
 function settlementData(){
  let c=currentCycle(),general=data.creditRecords.filter(r=>inCycle(r.date,c)),card=data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&r.paymentMethod==='card'&&inCycle(r.date,c)),cash=data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&r.paymentMethod==='cash'&&inCycle(r.date,c));
  let gt=general.reduce((a,r)=>a+(+r.amount||0),0),ct=card.reduce((a,r)=>a+(+r.amount||0),0),ht=cash.reduce((a,r)=>a+(+r.amount||0),0),base=+(data.reserveBase||11000);
