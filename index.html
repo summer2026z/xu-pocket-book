@@ -30,8 +30,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid #e5d9d5;border-ra
 <div class="hero"><div class="label">🏦 台新帳戶｜專款管理</div><div class="balance" id="total"></div><div class="small">分類加總 <span id="sumWallets"></span>　<span id="match"></span></div></div>
 <div class="sectionTitle">資金分配（虛擬錢包）</div><div id="wallets"></div>
 <button class="primary" onclick="openEntry()">＋ 記一筆</button>
-<div class="sectionTitle">快速記帳</div><div class="card chat"><input id="quick" placeholder="例如：酷澎 尿布 1099"><button class="secondary" onclick="quickEntry()">辨識</button></div>
-<div class="note">💡 快速記帳會先幫你填好資料，最後仍由你確認才會入帳。</div>
+
 </section>
 
 
@@ -51,8 +50,9 @@ input,select,textarea{width:100%;padding:13px;border:1px solid #e5d9d5;border-ra
 <div class="sectionTitle">記帳紀錄</div>
 <div class="card"><div class="monthTotal" id="monthTotal"></div><div class="small">本月實際由帳戶支出</div></div>
 <div class="filterbar"><button id="fAll" class="on" onclick="setRecordFilter('all',this)">全部</button><button onclick="setRecordFilter('reserve',this)">只看固存</button><button onclick="setRecordFilter('card',this)">信用卡代墊</button><button onclick="setRecordFilter('bike',this)">機車</button></div>
-<div class="card" id="recordList"></div></section>
+<div class="card"><label>明細期間</label><select id="rangeMode" onchange="updateRangeMode()"><option value="month">單月</option><option value="range">自訂日期區間</option><option value="all">全部歷史</option></select><div id="singleMonth"><input id="viewMonth" type="month" onchange="renderRecords()"></div><div id="customRange" class="grid2" style="display:none"><div><label>開始</label><input id="rangeStart" type="date" onchange="renderRecords()"></div><div><label>結束</label><input id="rangeEnd" type="date" onchange="renderRecords()"></div></div><div class="small" id="rangeSummary"></div></div><div class="card" id="recordList"></div></section>
 
+<section id="loans" class="page"><div class="hero"><div class="label">🌸 阿霓專款｜借還款管理</div><div class="balance" id="loanOutstanding">$0</div><div class="small">尚未歸還阿霓的金額（不含其他支出）</div></div><button class="primary" onclick="openLoan()">＋ 登記借款</button><div class="note">借款可以連結已記錄的阿霓專款支出，避免重複扣款。還款會自動存回阿霓專款，不重複列為消費。</div><div class="sectionTitle">借還款紀錄</div><div id="loanList"></div></section>
 <section id="settlement" class="page">
 <div class="hero settleHero">
   <div class="label">🧾 家庭固存｜每月代墊結算</div>
@@ -75,15 +75,17 @@ input,select,textarea{width:100%;padding:13px;border:1px solid #e5d9d5;border-ra
 </section>
 
 <section id="settings" class="page">
-<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.2｜新增先生現金代墊，於每月5日與固存信用卡一起扣抵。</div>
+<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.4｜新增阿霓專款借還管理及跨月份明細查詢。</div>
 <div class="card"><label>銀行實際餘額（核帳用）</label><input id="bankActual" type="number" inputmode="decimal"><button class="primary" onclick="saveActual()">更新實際餘額</button></div>
 <div class="card"><b>備份與還原</b><p class="small">資料存在這台裝置的瀏覽器，建議定期匯出備份。</p><div class="grid2"><button class="secondary" onclick="backup()">匯出備份</button><button class="secondary" onclick="restoreFile.click()">匯入備份</button></div><input id="restoreFile" type="file" accept=".json" style="display:none" onchange="restore(event)"></div>
 <button class="danger" onclick="resetAll()">重設為起始資料</button>
 </section></div>
 
-<div class="nav"><div class="navin"><button class="active" onclick="showPage('home',this)">⌂<br>首頁</button><button onclick="showPage('credit',this)">💳<br>信用卡</button><button onclick="showPage('records',this)">▤<br>紀錄</button><button onclick="showPage('reserve',this)">🧺<br>固存</button><button onclick="showPage('settlement',this)">🧾<br>結算</button><button onclick="showPage('settings',this)">•••<br>更多</button></div></div>
+<div class="nav"><div class="navin"><button class="active" onclick="showPage('home',this)">⌂<br>首頁</button><button onclick="showPage('credit',this)">💳<br>信用卡</button><button onclick="showPage('records',this)">▤<br>紀錄</button><button onclick="showPage('loans',this)">🌸<br>借還</button><button onclick="showPage('reserve',this)">🧺<br>固存</button><button onclick="showPage('settlement',this)">🧾<br>結算</button><button onclick="showPage('settings',this)">•••<br>更多</button></div></div>
 
 
+<div id="loanModal" class="modal"><div class="sheet"><button class="close" onclick="loanModal.classList.remove('on')">✕</button><h2>🌸 登記向阿霓借款</h2><label>日期</label><input id="loanDate" type="date"><label>金額</label><input id="loanAmount" type="number" inputmode="decimal"><label>用途</label><input id="loanMemo" placeholder="例如：11月份托嬰學費"><label>扣款方式</label><select id="loanSource" onchange="toggleLoanSource()"><option value="new">尚未記帳：新增阿霓專款支出</option><option value="existing">已記帳：連結現有支出，不再扣款</option></select><div id="loanExistingWrap" style="display:none"><label>選擇已記錄的阿霓支出</label><select id="loanExisting" onchange="syncExistingLoan()"></select></div><button class="primary" onclick="saveLoan()">儲存借款</button></div></div>
+<div id="repayModal" class="modal"><div class="sheet"><button class="close" onclick="repayModal.classList.remove('on')">✕</button><h2>💗 歸還阿霓專款</h2><div class="small" id="repayRemaining"></div><label>還款日期</label><input id="repayDate" type="date"><label>還款金額</label><input id="repayAmount" type="number" inputmode="decimal"><label>備註</label><input id="repayMemo" placeholder="例如：托育補助入帳後歸還"><button class="primary" onclick="saveRepayment()">確認還款並存入阿霓專款</button></div></div>
 <div id="creditModal" class="modal"><div class="sheet">
 <button class="close" onclick="closeCreditEntry()">✕</button>
 <h2 id="creditEntryTitle">記信用卡消費</h2>
@@ -110,12 +112,13 @@ const KEY='xuanPocketBookV1';
 const reserveSeed=[
 ['洗髮精','日用品',200,2,100],['沐浴乳','日用品',300,3,100],['擦臉巾','日用品',129,1,129],['洗手乳','日用品',200,5,40],['洗面乳','日用品',250,1,250],['衛生紙','日用品',1050,3,350],['私密清潔乳','日用品',240,3,80],['奶瓶清洗液','寶寶用品',350,5,70],['寶寶身體乳液','寶寶用品',660,12,55],['寶寶口腔噴霧','寶寶用品',240,4,60],['寶寶洗沐二合一','寶寶用品',200,5,40],['寶寶擦臉乳液','寶寶用品',300,12,25],['濕紙巾','寶寶用品',1000,5,200],['奶粉','寶寶用品',18600,4,4650],['尿布','寶寶用品',1800,1,1800],['乳鐵蛋白','寶寶用品',3600,8,450],['夜用尿布','寶寶用品',375,1,375],['保健食品','食品大人',4440,6,740],['停車費','其他',3000,3,1000]];
 const seed={bankActual:0,wallets:[{id:'nini',name:'阿霓專款',icon:'🌸',balance:0,cls:'w1'},{id:'reserve',name:'家庭固存',icon:'🧺',balance:0,cls:'w2'},{id:'bike',name:'機車預存',icon:'🛵',balance:0,cls:'w3'},{id:'temp',name:'暫存手機費',icon:'📱',balance:0,cls:'w4'}],reserveBase:11000,reserveItems:reserveSeed.map(x=>({name:x[0],category:x[1],price:x[2],cycle:x[3],monthly:x[4]})),records:[]};
-let data=load(),entryType='expense',editIndex=null,recordFilter='all';
+let data=load(),entryType='expense',editIndex=null,recordFilter='all',repayLoanId=null;
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function migrate(d){
   if(!d.reserveItems)d.reserveItems=clone(seed.reserveItems);
   if(!d.reserveBase)d.reserveBase=11000;
   if(!Array.isArray(d.records))d.records=[];
+  if(!Array.isArray(d.loans))d.loans=[];
   if(!Array.isArray(d.creditRecords))d.creditRecords=[];
   if(!d.creditHistorySeeded&&d.creditRecords.length===0){
     d.creditRecords=[{date:'2026-08-05',amount:320,memo:'阿咩洗澡'},{date:'2026-08-05',amount:3718,memo:'學費'},{date:'2026-08-05',amount:1797,memo:'萬家福食材'},{date:'2026-08-05',amount:547,memo:'萬家福湯飯'},{date:'2026-08-05',amount:680,memo:'Uber Eats'},{date:'2026-08-05',amount:173,memo:'髮泥'},{date:'2026-09-14',amount:252,memo:'Uber Eats'},{date:'2026-09-17',amount:588,memo:'Uber Eats（全聯）'},{date:'2026-09-24',amount:159,memo:'Uber Eats'},{date:'2026-10-04',amount:167,memo:'Uber Eats'}];
@@ -160,7 +163,7 @@ function render(){
    return `<div class="item"><div class="itemTop"><div class="grow"><b>${x.name}</b> <span class="pill">${x.category}</span><div class="small">單次約 ${money(x.price)}｜${x.cycle} 個月｜月均 ${money(x.monthly)}</div></div><b>${money(spent)}</b></div><div class="bar"><i style="width:${pct}%"></i></div><div class="small">本月：帳戶 ${money(direct)}＋信用卡 ${money(card)}＋現金代墊 ${money(cash)}</div></div>`
  }).join('');
  let monthSpend=data.records.filter(r=>r.type==='expense'&&!['card','cash'].includes(r.paymentMethod)&&r.date?.startsWith(month)).reduce((a,r)=>a+(+r.amount||0),0);monthTotal.textContent=money(monthSpend);
- renderRecords();renderCredit();renderSettlement();
+ renderRecords();renderCredit();renderSettlement();renderLoans();
  bankActual.value=data.bankActual;fillSelects();
 }
 function recordMatches(r){
@@ -170,17 +173,40 @@ function recordMatches(r){
  if(recordFilter==='bike')return r.wallet==='bike'||r.from==='bike'||r.to==='bike';
  return true;
 }
+function updateRangeMode(){singleMonth.style.display=rangeMode.value==='month'?'block':'none';customRange.style.display=rangeMode.value==='range'?'grid':'none';renderRecords()}
+function recordInRange(r){if(rangeMode.value==='all')return true;if(rangeMode.value==='month')return (r.date||'').startsWith(viewMonth.value);return (!rangeStart.value||r.date>=rangeStart.value)&&(!rangeEnd.value||r.date<=rangeEnd.value)}
 function renderRecords(){
- let rows=data.records.map((r,i)=>({...r,_i:i})).filter(recordMatches).reverse();
+ let rows=data.records.map((r,i)=>({...r,_i:i})).filter(r=>recordMatches(r)&&recordInRange(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b._i-a._i);
+ let spend=rows.filter(r=>r.type==='expense'&&!['card','cash'].includes(r.paymentMethod)).reduce((a,r)=>a+(+r.amount||0),0);
+ let income=rows.filter(r=>r.type==='income').reduce((a,r)=>a+(+r.amount||0),0);
+ rangeSummary.textContent=`顯示 ${rows.length} 筆｜帳戶支出 ${money(spend)}｜帳戶收入 ${money(income)}（含還款）`;
  recordList.innerHTML=rows.length?rows.map(r=>{
    let badge=r.wallet==='reserve'&&r.type==='expense'?(r.paymentMethod==='card'?'<span class="pill badgeCard">信用卡代墊</span>':r.paymentMethod==='cash'?'<span class="pill badgeCard">💵 現金代墊</span>':'<span class="pill badgeBank">帳戶扣款</span>'):'';
+   if(r.loanId||r.repaymentLoanId)badge+='<span class="pill">🌸 借還關聯</span>';
    let walletText=r.wallet?'｜'+(w(r.wallet)?.name||''):'';
    let amountPrefix=r.type==='expense'?'-':r.type==='income'?'+':'';
    let amtClass=r.type==='expense'?'neg':r.type==='income'?'pos':'';
-   return `<div class="row"><div class="grow"><b>${r.type==='transfer'?'↔️':r.type==='expense'?'🧾':'💰'} ${r.memo||'未命名'}</b> ${badge}<div class="small">${r.date}${walletText}${r.reserveItem?' → '+r.reserveItem:''}</div><div class="actions"><button class="secondary" onclick="editRecord(${r._i})">修改</button><button class="danger" onclick="deleteRecord(${r._i})">刪除</button></div></div><b class="money ${amtClass}">${amountPrefix}${money(r.amount)}</b></div>`
- }).join(''):'<div class="empty">這個分類目前沒有紀錄 🌷</div>';
+   return `<div class="row"><div class="grow"><b>${r.type==='transfer'?'↔️':r.type==='expense'?'🧾':'💰'} ${escapeHTML(r.memo||'未命名')}</b> ${badge}<div class="small">${r.date}${walletText}${r.reserveItem?' → '+escapeHTML(r.reserveItem):''}</div><div class="actions">${r.loanId||r.repaymentLoanId?'<span class="small">請至借還頁管理</span>':`<button class="secondary" onclick="editRecord(${r._i})">修改</button><button class="danger" onclick="deleteRecord(${r._i})">刪除</button>`}</div></div><b class="money ${amtClass}">${amountPrefix}${money(r.amount)}</b></div>`
+ }).join(''):'<div class="empty">這個期間沒有紀錄 🌷</div>';
 }
+function escapeHTML(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function setRecordFilter(f,btn){recordFilter=f;document.querySelectorAll('.filterbar button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');renderRecords()}
+function loanPaid(l){return (l.repayments||[]).reduce((sum,r)=>sum+(+r.amount||0),0)}
+function loanDue(l){return Math.max(0,(+l.amount||0)-loanPaid(l))}
+function renderLoans(){
+ loanOutstanding.textContent=money((data.loans||[]).reduce((sum,l)=>sum+loanDue(l),0));
+ loanList.innerHTML=data.loans.length?data.loans.slice().reverse().map(l=>`<div class="card"><b>${escapeHTML(l.memo)}</b><div class="small">借款日期 ${l.date}｜原借 ${money(l.amount)}</div><div class="row"><div class="grow">已還 ${money(loanPaid(l))}</div><b class="${loanDue(l)?'bad':'ok'}">${loanDue(l)?'尚欠 '+money(loanDue(l)):'已還清 ✓'}</b></div>${(l.repayments||[]).map(r=>`<div class="small">↳ ${r.date} 歸還 ${money(r.amount)} ${escapeHTML(r.memo||'')}</div>`).join('')}<div class="actions">${loanDue(l)?`<button class="secondary" onclick="openRepayment('${l.id}')">＋ 還款</button>`:''}<button class="danger" onclick="deleteLoan('${l.id}')">刪除借款</button></div></div>`).join(''):'<div class="card empty">尚無借款紀錄</div>';
+}
+function openLoan(){loanDate.value=localISODate();loanAmount.value='';loanMemo.value='';loanSource.value='new';let used=new Set(data.loans.map(l=>l.expenseId));let options=data.records.map((r,i)=>({r,i})).filter(x=>x.r.type==='expense'&&x.r.wallet==='nini'&&!used.has(x.r.id)&&!x.r.loanId);loanExisting.innerHTML=options.map(x=>`<option value="${x.i}">${x.r.date}｜${escapeHTML(x.r.memo)}｜${money(x.r.amount)}</option>`).join('');loanSource.options[1].disabled=!options.length;toggleLoanSource();loanModal.classList.add('on')}
+function toggleLoanSource(){loanExistingWrap.style.display=loanSource.value==='existing'?'block':'none';if(loanSource.value==='existing')syncExistingLoan()}
+function syncExistingLoan(){let r=data.records[+loanExisting.value];if(r){loanDate.value=r.date;loanAmount.value=r.amount;loanMemo.value=r.memo||''}}
+function saveLoan(){let a=+loanAmount.value,d=loanDate.value,m=loanMemo.value.trim();if(!Number.isFinite(a)||a<=0||!d)return alert('請填寫有效日期與金額');let id='loan'+Date.now()+Math.random().toString(36).slice(2,8),expenseId;
+ if(loanSource.value==='existing'){let r=data.records[+loanExisting.value];if(!r||r.type!=='expense'||r.wallet!=='nini'||r.loanId||data.loans.some(l=>l.expenseId===r.id))return alert('請重新選擇尚未關聯的阿霓支出');if(+r.amount!==a)return alert('借款金額須與已記錄支出相同');r.id=r.id||'record'+Date.now();expenseId=r.id;r.loanId=id;d=r.date}
+ else{let r={id:'record'+Date.now(),loanId:id,type:'expense',wallet:'nini',amount:a,date:d,memo:m||'阿霓專款借款支出'};applyRecord(r);data.records.push(r);expenseId=r.id}
+ data.loans.push({id,date:d,amount:a,memo:m||'阿霓專款借款',expenseId,repayments:[]});loanModal.classList.remove('on');persist()}
+function openRepayment(id){let l=data.loans.find(x=>x.id===id);if(!l)return;repayLoanId=id;repayDate.value=localISODate();repayAmount.value='';repayMemo.value='';repayRemaining.textContent=`尚欠 ${money(loanDue(l))}`;repayModal.classList.add('on')}
+function saveRepayment(){let l=data.loans.find(x=>x.id===repayLoanId),a=+repayAmount.value;if(!l||!Number.isFinite(a)||a<=0||a>loanDue(l)||!repayDate.value)return alert('還款金額需大於0、不得超過未還金額，並請填日期');let r={id:'repay'+Date.now(),type:'income',wallet:'nini',amount:a,date:repayDate.value,memo:repayMemo.value.trim()||'歸還阿霓專款',repaymentLoanId:l.id};applyRecord(r);data.records.push(r);l.repayments.push({id:r.id,date:r.date,amount:a,memo:r.memo});repayModal.classList.remove('on');persist()}
+function deleteLoan(id){let l=data.loans.find(x=>x.id===id);if(!l)return;if(!confirm('確定刪除這筆借款？關聯的學費支出會保留；已登記的還款也會保留為一般收入，請自行確認帳目。'))return;let r=data.records.find(x=>x.id===l.expenseId);if(r)delete r.loanId;for(let p of l.repayments){let rr=data.records.find(x=>x.id===p.id);if(rr)delete rr.repaymentLoanId}data.loans=data.loans.filter(x=>x.id!==id);persist()}
 function settlementData(){
  let c=currentCycle(),general=data.creditRecords.filter(r=>inCycle(r.date,c)),card=data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&r.paymentMethod==='card'&&inCycle(r.date,c)),cash=data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&r.paymentMethod==='cash'&&inCycle(r.date,c));
  let gt=general.reduce((a,r)=>a+(+r.amount||0),0),ct=card.reduce((a,r)=>a+(+r.amount||0),0),ht=cash.reduce((a,r)=>a+(+r.amount||0),0),base=+(data.reserveBase||11000);
@@ -263,15 +289,10 @@ function editRecord(i){
  else{wallet.value=r.wallet;toggleReserve();reserveItem.value=r.reserveItem||'';paymentMethod.value=r.paymentMethod||'account';memo.value=r.memo||''}
 }
 function deleteRecord(i){if(!confirm('確定刪除這筆紀錄？若這筆有影響帳戶餘額，也會自動還原。'))return;applyRecord(data.records[i],-1);data.records.splice(i,1);persist()}
-function quickEntry(){
- let s=quick.value.trim();if(!s)return;let m=s.match(/(\d[\d,]*)\s*$/);if(!m)return alert('最後請放金額，例如：酷澎 尿布 1099');
- let a=+m[1].replaceAll(',',''),text=s.slice(0,m.index).trim(),found=data.reserveItems.find(x=>text.includes(x.name));
- openEntry();amount.value=a;memo.value=text;if(found){wallet.value='reserve';toggleReserve();reserveItem.value=found.name}
-}
 function saveActual(){data.bankActual=+bankActual.value||0;persist();alert('已更新')}
 function backup(){let b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='宣的專款帳本備份-'+localISODate()+'.json';a.click()}
 function restore(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{data=migrate(JSON.parse(r.result));persist();alert('已還原')}catch{alert('備份檔格式不正確')}};r.readAsText(f)}
 function resetAll(){if(confirm('確定重設？目前裝置上的帳目會被起始資料取代。')){data=clone(seed);persist()}}
-render();
+viewMonth.value=currentMonth();rangeStart.value=currentMonth()+'-01';rangeEnd.value=localISODate();render();
 </script></body></html>
-<style>.navin{grid-template-columns:repeat(6,1fr)!important}.nav button{font-size:12px!important;padding-left:2px!important;padding-right:2px!important}</style>
+<style>.navin{grid-template-columns:repeat(7,1fr)!important}.nav button{font-size:12px!important;padding-left:2px!important;padding-right:2px!important}</style>
