@@ -74,9 +74,9 @@ input[type="date"],input[type="month"]{width:100%;min-width:0;max-width:100%;hei
   <div><span class="small">每月固存基準</span><br><b id="reserveBase"></b></div>
   <div><span class="small">本期信用卡代墊</span><br><b id="prevCardTotal"></b></div>
 </div>
-<div class="card"><label>自由結算截止日</label><input id="settleCutoff" type="date" onchange="renderSettlement()"><div class="small">只列出截止日以前尚未結算的項目。請勾選已入帳、這次要結算的消費；未勾選會保留到下一期。</div></div><div class="note">💵 先生現金代墊會從每月應存的 $11,000 扣抵，不會從現有固存餘額領款。</div><div class="sectionTitle">給先生看的明細</div>
+<div class="card"><label>選擇待結算月份（從2026年10月開始）</label><input id="settleViewMonth" type="month" min="2026-10" onchange="changeSettlementMonth()"><div class="small">各月份獨立列出未結算消費；未勾選的項目會繼續留在原消費月份，直到妳勾選保存。</div></div><div class="card"><label>自由結算截止日</label><input id="settleCutoff" type="date" onchange="renderSettlement()"><div class="small">只列出截止日以前尚未結算的項目。請勾選已入帳、這次要結算的消費；未勾選會保留到下一期。</div></div><div class="note">💵 先生現金代墊會從每月應存的 $11,000 扣抵，不會從現有固存餘額領款。</div><div class="sectionTitle">給先生看的明細</div>
 <div class="card"><div id="settleList"></div></div>
-<div class="grid2"><button class="secondary" onclick="shareSettlement()">分享目前勾選明細</button><button class="primary" onclick="saveSettlement()">確認並保存結算</button></div><div class="sectionTitle">歷史結算紀錄</div><div class="card"><label>選擇已保存的結算</label><select id="settlementHistorySelect" onchange="renderSettlementHistory()"></select><div id="settlementHistoryView"></div><button class="secondary" style="width:100%" onclick="shareSavedSettlement()">分享選取的歷史結算</button></div>
+<div class="grid2"><button class="secondary" onclick="shareSettlement()">分享目前勾選明細</button><button class="primary" onclick="saveSettlement()">確認並保存結算</button></div><div class="sectionTitle">歷史結算紀錄（按消費月份）</div><div class="card"><label>歷史消費月份</label><input id="settlementHistoryMonth" type="month" min="2026-10" onchange="renderSettlementHistory()"><label>選擇已保存的結算</label><select id="settlementHistorySelect" onchange="renderSettlementHistory()"></select><div id="settlementHistoryView"></div><button class="secondary" style="width:100%" onclick="shareSavedSettlement()">分享選取的歷史結算</button></div>
 <div class="note">💡 信用卡與先生現金代墊都只列入結算；實際收到先生存款後，再另外記一筆家庭固存收入。</div>
 </section>
 
@@ -86,7 +86,7 @@ input[type="date"],input[type="month"]{width:100%;min-width:0;max-width:100%;hei
 </section>
 
 <section id="settings" class="page">
-<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.6｜原版外觀，新增自由結算、未結算保留與歷史查詢。</div>
+<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.7｜結算及歷史按月管理，自2026年10月起。</div>
 <div class="card"><label>銀行實際餘額（核帳用）</label><input id="bankActual" type="number" inputmode="decimal"><button class="primary" onclick="saveActual()">更新實際餘額</button></div>
 <div class="card"><b>備份與還原</b><p class="small">資料存在這台裝置的瀏覽器，建議定期匯出備份。</p><div class="grid2"><button class="secondary" onclick="backup()">匯出備份</button><button class="secondary" onclick="restoreFile.click()">匯入備份</button></div><input id="restoreFile" type="file" accept=".json" style="display:none" onchange="restore(event)"></div>
 <button class="danger" onclick="resetAll()">重設為起始資料</button>
@@ -234,10 +234,12 @@ function ensureSettlementIds(){
 function cryptoId(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,11)}
 function settledIds(){return new Set((data.settlements||[]).flatMap(s=>s.items.map(x=>x.id)))}
 let selectedSettlementIds=new Set(),lastCandidateIds='';
+function changeSettlementMonth(){if(settleViewMonth.value<'2026-10')settleViewMonth.value='2026-10';selectedSettlementIds.clear();renderSettlement()}
+function settlementMonth(r){return (r.date||'').slice(0,7)}
 function settlementCandidates(){
- let cutoff=settleCutoff.value||localISODate(),done=settledIds();
+ let cutoff=settleCutoff.value||localISODate(),month=settleViewMonth.value||currentMonth(),done=settledIds();
  let rows=[...data.creditRecords.map(r=>({...r,kind:'general'})),...data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&['card','cash'].includes(r.paymentMethod)).map(r=>({...r,kind:r.paymentMethod}))];
- return rows.filter(r=>r.date&&r.date<=cutoff&&!done.has(r.id)).sort((a,b)=>a.date.localeCompare(b.date));
+ return rows.filter(r=>r.date&&r.date>='2026-10-01'&&settlementMonth(r)===month&&r.date<=cutoff&&!done.has(r.id)).sort((a,b)=>a.date.localeCompare(b.date));
 }
 function settlementData(){
  let all=settlementCandidates(),chosen=all.filter(r=>selectedSettlementIds.has(r.id));
@@ -251,15 +253,15 @@ function renderSettlement(){
  let all=settlementCandidates(),valid=new Set(all.map(r=>r.id));for(let id of selectedSettlementIds)if(!valid.has(id))selectedSettlementIds.delete(id);
  let {general,card,cash,gt,ct,ht,base,suggested}=settlementData();
  reserveBase.textContent=money(base);prevCardTotal.textContent=money(ct);settleSuggested.textContent=`本次預計應存固存 ${money(Math.max(0,suggested))}`;
- settleFormula.textContent=`截止 ${settleCutoff.value}｜${money(base)} − 信用卡 ${money(ct)} − 現金 ${money(ht)} = ${money(suggested)}`;
+ settleFormula.textContent=`${settleViewMonth.value} 消費｜截止 ${settleCutoff.value}｜${money(base)} − 信用卡 ${money(ct)} − 現金 ${money(ht)} = ${money(suggested)}`;
  let groups=[['👨 老公一般信用卡','general'],['💳 固存信用卡代墊','card'],['💵 先生現金代墊','cash']];
- settleList.innerHTML=`<div class="small">可選 ${all.length} 筆，已勾選 ${general.length+card.length+cash.length} 筆。未勾選不會結算。</div>`+groups.map(([title,kind])=>{let rows=all.filter(r=>r.kind===kind);return `<h3>${title}｜${money(rows.filter(r=>selectedSettlementIds.has(r.id)).reduce((n,r)=>n+(+r.amount||0),0))}</h3>${rows.length?rows.map(settleLine).join(''):'<div class="small">目前沒有待結算項目</div>'}<hr>`}).join('')+`<div class="row"><div class="grow"><b>本次信用卡合計（一般＋固存）</b></div><b>${money(gt+ct)}</b></div><div class="row"><div class="grow"><b>固存代墊扣抵合計</b></div><b>${money(ct+ht)}</b></div>${suggested<0?'<div class="note">⚠️ 代墊超過固存基準 '+money(-suggested)+'，需另行協調；不會自動扣款。</div>':''}`;
+ settleList.innerHTML=`<div class="small">${settleViewMonth.value}｜可選 ${all.length} 筆，已勾選 ${general.length+card.length+cash.length} 筆。未勾選不會結算。</div>`+groups.map(([title,kind])=>{let rows=all.filter(r=>r.kind===kind);return `<h3>${title}｜${money(rows.filter(r=>selectedSettlementIds.has(r.id)).reduce((n,r)=>n+(+r.amount||0),0))}</h3>${rows.length?rows.map(settleLine).join(''):'<div class="small">目前沒有待結算項目</div>'}<hr>`}).join('')+`<div class="row"><div class="grow"><b>本次信用卡合計（一般＋固存）</b></div><b>${money(gt+ct)}</b></div><div class="row"><div class="grow"><b>固存代墊扣抵合計</b></div><b>${money(ct+ht)}</b></div>${suggested<0?'<div class="note">⚠️ 代墊超過固存基準 '+money(-suggested)+'，需另行協調；不會自動扣款。</div>':''}`;
  renderSettlementHistory();
 }
 function settlementText(snapshot){
- let s=snapshot||(()=>{let d=settlementData();return {date:localISODate(),cutoff:settleCutoff.value,items:[...d.general,...d.card,...d.cash],base:d.base}})();
+ let s=snapshot||(()=>{let d=settlementData();return {date:localISODate(),cutoff:settleCutoff.value,month:settleViewMonth.value,items:[...d.general,...d.card,...d.cash],base:d.base}})();
  let items=s.items||[],sum=kind=>items.filter(r=>r.kind===kind).reduce((n,r)=>n+(+r.amount||0),0),gt=sum('general'),ct=sum('card'),ht=sum('cash'),base=+s.base||11000;
- let lines=[`🧾 家庭固存與信用卡結算`,`結算日期：${s.date}`,`消費截止日：${s.cutoff}`];
+ let lines=[`🧾 家庭固存與信用卡結算`,`結算日期：${s.date}`,`消費月份：${s.month||'依明細日期'}`,`消費截止日：${s.cutoff}`];
  for(let [kind,label] of [['general','👨 老公一般信用卡'],['card','💳 固存信用卡代墊'],['cash','💵 先生現金代墊']]){lines.push('',label);items.filter(r=>r.kind===kind).forEach(r=>lines.push(`${r.date} ${r.reserveItem||r.memo||'消費'}　${money(r.amount)}`));lines.push('小計：'+money(sum(kind)))}
  lines.push('',`一般＋固存信用卡合計：${money(gt+ct)}`,`固存基準：${money(base)}`,`固存信用卡扣抵：${money(ct)}`,`先生現金扣抵：${money(ht)}`,`本次應存固存：${money(Math.max(0,base-ct-ht))}`,'（結算不會自動更動帳戶餘額；實際收到存款後請另記收入）');return lines.join('\n');
 }
@@ -269,16 +271,16 @@ function saveSettlement(){
  let d=settlementData();if(!d.general.length&&!d.card.length&&!d.cash.length)return alert('請先勾選本次要結算的消費');
  if(!confirm(`確認保存本次 ${d.general.length+d.card.length+d.cash.length} 筆結算？保存後這些項目不會再列入待結算。`))return;
  let items=[...d.general,...d.card,...d.cash].map(r=>({id:r.id,kind:r.kind,date:r.date,amount:r.amount,memo:r.memo||'',reserveItem:r.reserveItem||''}));
- data.settlements.push({id:'settle-'+cryptoId(),date:localISODate(),cutoff:settleCutoff.value,base:d.base,items});selectedSettlementIds.clear();persist();alert('結算已保存，可在歷史結算紀錄查看。實際存款仍需另外記帳。')
+ data.settlements.push({id:'settle-'+cryptoId(),date:localISODate(),month:settleViewMonth.value,cutoff:settleCutoff.value,base:d.base,items});selectedSettlementIds.clear();persist();alert('結算已保存，可在歷史結算紀錄查看。實際存款仍需另外記帳。')
 }
 function renderSettlementHistory(){
- let arr=data.settlements||[],prior=settlementHistorySelect.value;
- settlementHistorySelect.innerHTML=arr.length?arr.slice().reverse().map(s=>`<option value="${s.id}">${s.date}｜截止 ${s.cutoff}｜${s.items.length} 筆</option>`).join(''):'<option value="">尚無已保存結算</option>';
+ let month=settlementHistoryMonth.value||currentMonth(),arr=(data.settlements||[]).filter(s=>(s.items||[]).some(r=>settlementMonth(r)===month)),prior=settlementHistorySelect.value;
+ settlementHistorySelect.innerHTML=arr.length?arr.slice().reverse().map(s=>{let count=s.items.filter(r=>settlementMonth(r)===month).length;return `<option value="${s.id}">${s.date} 保存｜${count} 筆｜${escapeHTML(month)}</option>`}).join(''):'<option value="">這個月份尚無已保存結算</option>';
  if(arr.some(s=>s.id===prior))settlementHistorySelect.value=prior;
  let s=arr.find(x=>x.id===settlementHistorySelect.value);
- settlementHistoryView.innerHTML=s?`<div class="sharebox">${escapeHTML(settlementText(s))}</div>`:'<div class="small">舊版尚未保存過結算快照；原本的歷史消費仍可在信用卡月份及記帳紀錄查詢。</div>';
+ settlementHistoryView.innerHTML=s?`<div class="sharebox">${escapeHTML(settlementText({...s,month,items:s.items.filter(r=>settlementMonth(r)===month)}))}</div>`:'<div class="small">這個月份尚未保存任何結算；未勾選的消費仍留在該月待結算清單。</div>';
 }
-function shareSavedSettlement(){let s=(data.settlements||[]).find(x=>x.id===settlementHistorySelect.value);if(!s)return alert('尚無歷史結算');shareText(settlementText(s))}
+function shareSavedSettlement(){let s=(data.settlements||[]).find(x=>x.id===settlementHistorySelect.value);if(!s)return alert('尚無歷史結算');shareText(settlementText({...s,month:settlementHistoryMonth.value,items:s.items.filter(r=>settlementMonth(r)===settlementHistoryMonth.value)}))}
 function renderCredit(){
  let m=creditViewMonth.value||currentMonth(),rows=data.creditRecords.map((r,i)=>({...r,_i:i})).filter(r=>r.date?.startsWith(m)).reverse(),tot=rows.reduce((a,r)=>a+(+r.amount||0),0),done=settledIds();
  creditCycleTotal.textContent=money(tot);creditCycleLabel.textContent=`${m.replace('-','年')}月｜${rows.length} 筆消費`;
@@ -337,6 +339,6 @@ function saveActual(){data.bankActual=+bankActual.value||0;persist();alert('已�
 function backup(){let b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='宣的專款帳本備份-'+localISODate()+'.json';a.click()}
 function restore(e){let f=e.target.files[0];if(!f)return;if(!confirm('匯入備份將取代目前網頁內的資料，請先確認已匯出目前資料。確定繼續？'))return;let r=new FileReader();r.onload=()=>{try{data=migrate(JSON.parse(r.result));ensureSettlementIds();selectedSettlementIds.clear();persist();alert('已還原')}catch{alert('備份檔格式不正確')}};r.readAsText(f)}
 function resetAll(){if(confirm('確定重設？目前裝置上的帳目會被起始資料取代。')){data=clone(seed);persist()}}
-viewMonth.value=currentMonth();rangeStart.value=currentMonth()+'-01';rangeEnd.value=localISODate();creditViewMonth.value=currentMonth();settleCutoff.value=localISODate();ensureSettlementIds();localStorage.setItem(KEY,JSON.stringify(data));render();
+viewMonth.value=currentMonth();rangeStart.value=currentMonth()+'-01';rangeEnd.value=localISODate();creditViewMonth.value=currentMonth();settleViewMonth.value=currentMonth()<'2026-10'?'2026-10':currentMonth();settlementHistoryMonth.value=settleViewMonth.value;settleCutoff.value=localISODate();ensureSettlementIds();localStorage.setItem(KEY,JSON.stringify(data));render();
 </script></body></html>
 <style>.navin{grid-template-columns:repeat(7,1fr)!important}.nav button{font-size:12px!important;padding-left:2px!important;padding-right:2px!important}</style>
