@@ -51,7 +51,7 @@ input[type="date"],input[type="month"]{width:100%;min-width:0;max-width:100%;hei
   <div class="balance" id="creditCycleTotal">$0</div>
   <div class="small" id="creditCycleLabel"></div>
 </div>
-<div class="sectionTitle">這期明細</div>
+<div class="card"><label>查詢信用卡消費月份</label><input id="creditViewMonth" type="month" onchange="renderCredit()"><div class="small">可查閱各月消費；是否結算另由結算頁決定。</div></div><div class="sectionTitle">當月明細</div>
 <div class="card" id="creditList"></div>
 <button class="primary" onclick="openCreditEntry()">＋ 記信用卡消費</button>
 <div class="note">這裡只記平時信用卡消費，不會影響台新專款帳戶或任何虛擬錢包。</div>
@@ -74,9 +74,9 @@ input[type="date"],input[type="month"]{width:100%;min-width:0;max-width:100%;hei
   <div><span class="small">每月固存基準</span><br><b id="reserveBase"></b></div>
   <div><span class="small">本期信用卡代墊</span><br><b id="prevCardTotal"></b></div>
 </div>
-<div class="note">💵 先生現金代墊會從每月應存的 $11,000 扣抵，不會從現有固存餘額領款。</div><div class="sectionTitle">給先生看的明細</div>
+<div class="card"><label>自由結算截止日</label><input id="settleCutoff" type="date" onchange="renderSettlement()"><div class="small">只列出截止日以前尚未結算的項目。請勾選已入帳、這次要結算的消費；未勾選會保留到下一期。</div></div><div class="note">💵 先生現金代墊會從每月應存的 $11,000 扣抵，不會從現有固存餘額領款。</div><div class="sectionTitle">給先生看的明細</div>
 <div class="card"><div id="settleList"></div></div>
-<button class="primary" onclick="shareSettlement()">分享／複製明細</button>
+<div class="grid2"><button class="secondary" onclick="shareSettlement()">分享目前勾選明細</button><button class="primary" onclick="saveSettlement()">確認並保存結算</button></div><div class="sectionTitle">歷史結算紀錄</div><div class="card"><label>選擇已保存的結算</label><select id="settlementHistorySelect" onchange="renderSettlementHistory()"></select><div id="settlementHistoryView"></div><button class="secondary" style="width:100%" onclick="shareSavedSettlement()">分享選取的歷史結算</button></div>
 <div class="note">💡 信用卡與先生現金代墊都只列入結算；實際收到先生存款後，再另外記一筆家庭固存收入。</div>
 </section>
 
@@ -86,7 +86,7 @@ input[type="date"],input[type="month"]{width:100%;min-width:0;max-width:100%;hei
 </section>
 
 <section id="settings" class="page">
-<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.5｜新增阿霓專款借還管理及跨月份明細查詢。</div>
+<div class="sectionTitle">帳本設定</div><div class="note">目前版本 v4.6｜原版外觀，新增自由結算、未結算保留與歷史查詢。</div>
 <div class="card"><label>銀行實際餘額（核帳用）</label><input id="bankActual" type="number" inputmode="decimal"><button class="primary" onclick="saveActual()">更新實際餘額</button></div>
 <div class="card"><b>備份與還原</b><p class="small">資料存在這台裝置的瀏覽器，建議定期匯出備份。</p><div class="grid2"><button class="secondary" onclick="backup()">匯出備份</button><button class="secondary" onclick="restoreFile.click()">匯入備份</button></div><input id="restoreFile" type="file" accept=".json" style="display:none" onchange="restore(event)"></div>
 <button class="danger" onclick="resetAll()">重設為起始資料</button>
@@ -112,7 +112,7 @@ input[type="date"],input[type="month"]{width:100%;min-width:0;max-width:100%;hei
 <div id="normalFields"><label>錢包</label><select id="wallet"></select>
 <div id="reserveField">
   <label>固存項目</label><select id="reserveItem"></select>
-  <label>付款方式</label><select id="paymentMethod"><option value="account">台新固存直接扣款</option><option value="card">信用卡先墊（下月結算）</option><option value="cash">💵 先生現金代墊（5號扣抵）</option></select>
+  <label>付款方式</label><select id="paymentMethod"><option value="account">台新固存直接扣款</option><option value="card">信用卡先墊（自由結算）</option><option value="cash">💵 先生現金代墊（自由結算）</option></select>
 </div>
 <label>項目／備註</label><input id="memo"></div>
 <div id="transferFields" style="display:none"><label>從</label><select id="fromWallet"></select><label>轉到</label><select id="toWallet"></select></div>
@@ -132,6 +132,7 @@ function migrate(d){
   if(!Array.isArray(d.loans))d.loans=[];
   if(!Array.isArray(d.historicalRecords))d.historicalRecords=[];
   if(!Array.isArray(d.creditRecords))d.creditRecords=[];
+   if(!Array.isArray(d.settlements))d.settlements=[];
   if(!d.creditHistorySeeded&&d.creditRecords.length===0){
     d.creditRecords=[{date:'2026-08-05',amount:320,memo:'阿咩洗澡'},{date:'2026-08-05',amount:3718,memo:'學費'},{date:'2026-08-05',amount:1797,memo:'萬家福食材'},{date:'2026-08-05',amount:547,memo:'萬家福湯飯'},{date:'2026-08-05',amount:680,memo:'Uber Eats'},{date:'2026-08-05',amount:173,memo:'髮泥'},{date:'2026-09-14',amount:252,memo:'Uber Eats'},{date:'2026-09-17',amount:588,memo:'Uber Eats（全聯）'},{date:'2026-09-24',amount:159,memo:'Uber Eats'},{date:'2026-10-04',amount:167,memo:'Uber Eats'}];
     d.creditHistorySeeded=true;
@@ -225,45 +226,70 @@ function saveLoan(){let a=+loanAmount.value,d=loanDate.value,m=loanMemo.value.tr
 function openRepayment(id){let l=data.loans.find(x=>x.id===id);if(!l)return;repayLoanId=id;repayDate.value=localISODate();repayAmount.value='';repayMemo.value='';repayRemaining.textContent=`尚欠 ${money(loanDue(l))}`;repayModal.classList.add('on')}
 function saveRepayment(){let l=data.loans.find(x=>x.id===repayLoanId),a=+repayAmount.value;if(!l||!Number.isFinite(a)||a<=0||a>loanDue(l)||!repayDate.value)return alert('還款金額需大於0、不得超過未還金額，並請填日期');let r={id:'repay'+Date.now(),type:'income',wallet:'nini',amount:a,date:repayDate.value,memo:repayMemo.value.trim()||'歸還阿霓專款',repaymentLoanId:l.id};applyRecord(r);data.records.push(r);l.repayments.push({id:r.id,date:r.date,amount:a,memo:r.memo});repayModal.classList.remove('on');persist()}
 function deleteLoan(id){let l=data.loans.find(x=>x.id===id);if(!l)return;if(!confirm(l.historical?'確定刪除歷史借款紀錄？這不會影響帳戶餘額，但已登記還款仍會保留。':'確定刪除這筆借款？關聯的學費支出會保留；已登記的還款也會保留為一般收入，請自行確認帳目。'))return;let r=data.records.find(x=>x.id===l.expenseId);if(r)delete r.loanId;for(let p of l.repayments){let rr=data.records.find(x=>x.id===p.id);if(rr)delete rr.repaymentLoanId}data.loans=data.loans.filter(x=>x.id!==id);persist()}
+// 結算使用穩定識別碼，舊備份沒有 ID 時只補 ID，不改動金額或餘額。
+function ensureSettlementIds(){
+ data.creditRecords.forEach(r=>{if(!r.id)r.id='credit-'+cryptoId()});
+ data.records.forEach(r=>{if(r.type==='expense'&&r.wallet==='reserve'&&['card','cash'].includes(r.paymentMethod)&&!r.id)r.id='expense-'+cryptoId()});
+}
+function cryptoId(){return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,11)}
+function settledIds(){return new Set((data.settlements||[]).flatMap(s=>s.items.map(x=>x.id)))}
+let selectedSettlementIds=new Set(),lastCandidateIds='';
+function settlementCandidates(){
+ let cutoff=settleCutoff.value||localISODate(),done=settledIds();
+ let rows=[...data.creditRecords.map(r=>({...r,kind:'general'})),...data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&['card','cash'].includes(r.paymentMethod)).map(r=>({...r,kind:r.paymentMethod}))];
+ return rows.filter(r=>r.date&&r.date<=cutoff&&!done.has(r.id)).sort((a,b)=>a.date.localeCompare(b.date));
+}
 function settlementData(){
- let c=currentCycle(),general=data.creditRecords.filter(r=>inCycle(r.date,c)),card=data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&r.paymentMethod==='card'&&inCycle(r.date,c)),cash=data.records.filter(r=>r.type==='expense'&&r.wallet==='reserve'&&r.paymentMethod==='cash'&&inCycle(r.date,c));
- let gt=general.reduce((a,r)=>a+(+r.amount||0),0),ct=card.reduce((a,r)=>a+(+r.amount||0),0),ht=cash.reduce((a,r)=>a+(+r.amount||0),0),base=+(data.reserveBase||11000);
- return {c,general,card,cash,gt,ct,ht,base,suggested:base-ct-ht};
+ let all=settlementCandidates(),chosen=all.filter(r=>selectedSettlementIds.has(r.id));
+ let general=chosen.filter(r=>r.kind==='general'),card=chosen.filter(r=>r.kind==='card'),cash=chosen.filter(r=>r.kind==='cash');
+ let sum=rows=>rows.reduce((a,r)=>a+(+r.amount||0),0),gt=sum(general),ct=sum(card),ht=sum(cash),base=+(data.reserveBase||11000);
+ return {all,general,card,cash,gt,ct,ht,base,suggested:base-ct-ht};
 }
-function settlementRows(rows,empty){return rows.length?rows.map(r=>`<div class="row"><div class="grow"><b>${r.reserveItem||r.memo||'固存用品'}</b><div class="small">${r.date}${r.memo&&r.memo!==r.reserveItem?'｜'+r.memo:''}</div></div><b>${money(r.amount)}</b></div>`).join(''):`<div class="small">${empty}</div>`}
+function settleLine(r){return `<div class="row"><label class="grow" style="display:flex;align-items:center;gap:8px"><input type="checkbox" style="width:20px;flex:none;margin:0" ${selectedSettlementIds.has(r.id)?'checked':''} onchange="toggleSettlementItem('${r.id}',this.checked)"><span><b>${escapeHTML(r.reserveItem||r.memo||'消費')}</b><div class="small">${escapeHTML(r.date)}｜${escapeHTML(r.memo||'')}</div></span></label><b>${money(r.amount)}</b></div>`}
+function toggleSettlementItem(id,checked){if(checked)selectedSettlementIds.add(id);else selectedSettlementIds.delete(id);renderSettlement()}
 function renderSettlement(){
- let {c,general,card,cash,gt,ct,ht,base,suggested}=settlementData();
- reserveBase.textContent=money(base);prevCardTotal.textContent=money(ct);settleSuggested.textContent=`本月實際應存固存 ${money(Math.max(0,suggested))}`;
- settleFormula.textContent=`${cycleLabel(c)}｜${money(base)} − 信用卡 ${money(ct)} − 現金 ${money(ht)} = ${money(suggested)}`;
- let ghtml=general.length?general.map(r=>`<div class="row"><div class="grow"><b>${r.memo||'一般消費'}</b><div class="small">${r.date}</div></div><b>${money(r.amount)}</b></div>`).join(''):'<div class="small">這期沒有一般信用卡消費</div>';
- settleList.innerHTML=`<h3>👨 老公一般信用卡｜${money(gt)}</h3>${ghtml}<hr><h3>💳 固存信用卡代墊｜${money(ct)}</h3>${settlementRows(card,'這期沒有固存信用卡代墊')}<hr><h3>💵 先生現金代墊｜${money(ht)}</h3>${settlementRows(cash,'這期沒有先生現金代墊')}<hr><div class="row"><div class="grow"><b>本期信用卡合計（一般＋固存）</b></div><b>${money(gt+ct)}</b></div><div class="row"><div class="grow"><b>固存代墊扣抵合計</b></div><b>${money(ct+ht)}</b></div>${suggested<0?'<div class="note">⚠️ 本期代墊已超過每月固存基準，超出 '+money(-suggested)+'，請另外協調處理；不會自動扣款。</div>':''}`;
+ let all=settlementCandidates(),valid=new Set(all.map(r=>r.id));for(let id of selectedSettlementIds)if(!valid.has(id))selectedSettlementIds.delete(id);
+ let {general,card,cash,gt,ct,ht,base,suggested}=settlementData();
+ reserveBase.textContent=money(base);prevCardTotal.textContent=money(ct);settleSuggested.textContent=`本次預計應存固存 ${money(Math.max(0,suggested))}`;
+ settleFormula.textContent=`截止 ${settleCutoff.value}｜${money(base)} − 信用卡 ${money(ct)} − 現金 ${money(ht)} = ${money(suggested)}`;
+ let groups=[['👨 老公一般信用卡','general'],['💳 固存信用卡代墊','card'],['💵 先生現金代墊','cash']];
+ settleList.innerHTML=`<div class="small">可選 ${all.length} 筆，已勾選 ${general.length+card.length+cash.length} 筆。未勾選不會結算。</div>`+groups.map(([title,kind])=>{let rows=all.filter(r=>r.kind===kind);return `<h3>${title}｜${money(rows.filter(r=>selectedSettlementIds.has(r.id)).reduce((n,r)=>n+(+r.amount||0),0))}</h3>${rows.length?rows.map(settleLine).join(''):'<div class="small">目前沒有待結算項目</div>'}<hr>`}).join('')+`<div class="row"><div class="grow"><b>本次信用卡合計（一般＋固存）</b></div><b>${money(gt+ct)}</b></div><div class="row"><div class="grow"><b>固存代墊扣抵合計</b></div><b>${money(ct+ht)}</b></div>${suggested<0?'<div class="note">⚠️ 代墊超過固存基準 '+money(-suggested)+'，需另行協調；不會自動扣款。</div>':''}`;
+ renderSettlementHistory();
 }
-function settlementText(){
- let {c,general,card,cash,gt,ct,ht,base,suggested}=settlementData();
- let lines=[`🧾 ${c.settle.slice(5).replace('-','/')} 固存與信用卡結算`,`期間：${c.start.slice(5).replace('-','/')}～${c.end.slice(5).replace('-','/')}`,'','👨 老公一般信用卡'];
- general.forEach(r=>lines.push(`${r.memo||'一般消費'}　${money(r.amount)}`));lines.push(`小計：${money(gt)}`,'','💳 固存信用卡代墊');
- card.forEach(r=>lines.push(`${r.date} ${r.reserveItem||r.memo||'固存用品'}　${money(r.amount)}`));lines.push(`小計：${money(ct)}`,'','💵 先生現金代墊');
- cash.forEach(r=>lines.push(`${r.date} ${r.reserveItem||r.memo||'固存用品'}　${money(r.amount)}`));lines.push(`小計：${money(ht)}`,'',`一般＋固存信用卡合計：${money(gt+ct)}`,'',`每月固存基準：${money(base)}`,`固存信用卡代墊：-${money(ct)}`,`先生現金代墊：-${money(ht)}`,`本月實際應存固存：${money(Math.max(0,suggested))}`);
- if(suggested<0)lines.push(`⚠️ 代墊超出基準：${money(-suggested)}，需另外協調處理`);
- lines.push('（實際存款需另記收入，這份結算不會自動更動帳戶餘額）');return lines.join('\n');
+function settlementText(snapshot){
+ let s=snapshot||(()=>{let d=settlementData();return {date:localISODate(),cutoff:settleCutoff.value,items:[...d.general,...d.card,...d.cash],base:d.base}})();
+ let items=s.items||[],sum=kind=>items.filter(r=>r.kind===kind).reduce((n,r)=>n+(+r.amount||0),0),gt=sum('general'),ct=sum('card'),ht=sum('cash'),base=+s.base||11000;
+ let lines=[`🧾 家庭固存與信用卡結算`,`結算日期：${s.date}`,`消費截止日：${s.cutoff}`];
+ for(let [kind,label] of [['general','👨 老公一般信用卡'],['card','💳 固存信用卡代墊'],['cash','💵 先生現金代墊']]){lines.push('',label);items.filter(r=>r.kind===kind).forEach(r=>lines.push(`${r.date} ${r.reserveItem||r.memo||'消費'}　${money(r.amount)}`));lines.push('小計：'+money(sum(kind)))}
+ lines.push('',`一般＋固存信用卡合計：${money(gt+ct)}`,`固存基準：${money(base)}`,`固存信用卡扣抵：${money(ct)}`,`先生現金扣抵：${money(ht)}`,`本次應存固存：${money(Math.max(0,base-ct-ht))}`,'（結算不會自動更動帳戶餘額；實際收到存款後請另記收入）');return lines.join('\n');
 }
-async function shareSettlement(){
- let text=settlementText();
- try{if(navigator.share){await navigator.share({title:'家庭固存結算明細',text});return}}catch(e){if(e.name==='AbortError')return}
- try{await navigator.clipboard.writeText(text);alert('已複製，可以直接貼到 LINE 給先生。')}catch(e){prompt('請長按複製明細：',text)}
+async function shareText(t){try{if(navigator.share){await navigator.share({title:'家庭固存結算明細',text:t});return}}catch(e){if(e.name==='AbortError')return}try{await navigator.clipboard.writeText(t);alert('已複製，可以貼到 LINE。')}catch(e){prompt('請長按複製：',t)}}
+function shareSettlement(){shareText(settlementText())}
+function saveSettlement(){
+ let d=settlementData();if(!d.general.length&&!d.card.length&&!d.cash.length)return alert('請先勾選本次要結算的消費');
+ if(!confirm(`確認保存本次 ${d.general.length+d.card.length+d.cash.length} 筆結算？保存後這些項目不會再列入待結算。`))return;
+ let items=[...d.general,...d.card,...d.cash].map(r=>({id:r.id,kind:r.kind,date:r.date,amount:r.amount,memo:r.memo||'',reserveItem:r.reserveItem||''}));
+ data.settlements.push({id:'settle-'+cryptoId(),date:localISODate(),cutoff:settleCutoff.value,base:d.base,items});selectedSettlementIds.clear();persist();alert('結算已保存，可在歷史結算紀錄查看。實際存款仍需另外記帳。')
 }
-
+function renderSettlementHistory(){
+ let arr=data.settlements||[],prior=settlementHistorySelect.value;
+ settlementHistorySelect.innerHTML=arr.length?arr.slice().reverse().map(s=>`<option value="${s.id}">${s.date}｜截止 ${s.cutoff}｜${s.items.length} 筆</option>`).join(''):'<option value="">尚無已保存結算</option>';
+ if(arr.some(s=>s.id===prior))settlementHistorySelect.value=prior;
+ let s=arr.find(x=>x.id===settlementHistorySelect.value);
+ settlementHistoryView.innerHTML=s?`<div class="sharebox">${escapeHTML(settlementText(s))}</div>`:'<div class="small">舊版尚未保存過結算快照；原本的歷史消費仍可在信用卡月份及記帳紀錄查詢。</div>';
+}
+function shareSavedSettlement(){let s=(data.settlements||[]).find(x=>x.id===settlementHistorySelect.value);if(!s)return alert('尚無歷史結算');shareText(settlementText(s))}
 function renderCredit(){
- let c=currentCycle(),rows=data.creditRecords.map((r,i)=>({...r,_i:i})).filter(r=>inCycle(r.date,c)).reverse(),tot=rows.reduce((a,r)=>a+(+r.amount||0),0);
- creditCycleTotal.textContent=money(tot);creditCycleLabel.textContent=cycleLabel(c);
- creditList.innerHTML=rows.length?rows.map(r=>`<div class="row"><div class="grow"><b>💳 ${r.memo||'一般消費'}</b><div class="small">${r.date}｜老公支付</div><div class="actions"><button class="secondary" onclick="editCreditRecord(${r._i})">修改</button><button class="danger" onclick="deleteCreditRecord(${r._i})">刪除</button></div></div><b>${money(r.amount)}</b></div>`).join(''):'<div class="empty">這期還沒有一般信用卡消費 🌷</div>';
+ let m=creditViewMonth.value||currentMonth(),rows=data.creditRecords.map((r,i)=>({...r,_i:i})).filter(r=>r.date?.startsWith(m)).reverse(),tot=rows.reduce((a,r)=>a+(+r.amount||0),0),done=settledIds();
+ creditCycleTotal.textContent=money(tot);creditCycleLabel.textContent=`${m.replace('-','年')}月｜${rows.length} 筆消費`;
+ creditList.innerHTML=rows.length?rows.map(r=>`<div class="row"><div class="grow"><b>💳 ${escapeHTML(r.memo||'一般消費')}</b><div class="small">${r.date}｜${done.has(r.id)?'已結算':'尚未結算'}｜老公支付</div><div class="actions">${done.has(r.id)?'<span class="small">已結算項目不可直接修改</span>':`<button class="secondary" onclick="editCreditRecord(${r._i})">修改</button><button class="danger" onclick="deleteCreditRecord(${r._i})">刪除</button>`}</div></div><b>${money(r.amount)}</b></div>`).join(''):'<div class="empty">這個月份沒有一般信用卡消費 🌷</div>';
 }
 let creditEditIndex=null;
 function openCreditEntry(){creditEditIndex=null;creditEntryTitle.textContent='記信用卡消費';creditAmount.value='';creditDate.value=localISODate();creditMemo.value='';creditModal.classList.add('on')}
 function closeCreditEntry(){creditModal.classList.remove('on');creditEditIndex=null}
-function saveCreditEntry(){let a=+creditAmount.value,d=creditDate.value,m=creditMemo.value.trim();if(!a||a<=0)return alert('請輸入金額');if(!d)return alert('請選日期');if(!m)return alert('請輸入項目／備註');let r={amount:a,date:d,memo:m};if(creditEditIndex===null)data.creditRecords.push(r);else data.creditRecords[creditEditIndex]=r;closeCreditEntry();persist()}
-function editCreditRecord(i){let r=data.creditRecords[i];creditEditIndex=i;creditEntryTitle.textContent='修改信用卡消費';creditAmount.value=r.amount;creditDate.value=r.date;creditMemo.value=r.memo||'';creditModal.classList.add('on')}
-function deleteCreditRecord(i){if(!confirm('確定刪除這筆信用卡消費？'))return;data.creditRecords.splice(i,1);persist()}
+function saveCreditEntry(){let a=+creditAmount.value,d=creditDate.value,m=creditMemo.value.trim();if(!a||a<=0)return alert('請輸入金額');if(!d)return alert('請選日期');if(!m)return alert('請輸入項目／備註');let r={amount:a,date:d,memo:m};if(creditEditIndex===null){r.id='credit-'+cryptoId();data.creditRecords.push(r)}else{r.id=data.creditRecords[creditEditIndex].id;if(settledIds().has(r.id))return alert('已結算項目不可修改');data.creditRecords[creditEditIndex]=r;}closeCreditEntry();persist()}
+function editCreditRecord(i){let r=data.creditRecords[i];if(settledIds().has(r.id))return alert('已結算項目不可修改');creditEditIndex=i;creditEntryTitle.textContent='修改信用卡消費';creditAmount.value=r.amount;creditDate.value=r.date;creditMemo.value=r.memo||'';creditModal.classList.add('on')}
+function deleteCreditRecord(i){if(settledIds().has(data.creditRecords[i]?.id))return alert('已結算項目不可刪除');if(!confirm('確定刪除這筆信用卡消費？'))return;data.creditRecords.splice(i,1);persist()}
 function fillSelects(){
  let opts=data.wallets.map(x=>`<option value="${x.id}">${x.icon} ${x.name}｜${money(x.balance)}</option>`).join('');
  ['wallet','fromWallet','toWallet'].forEach(id=>document.getElementById(id).innerHTML=opts);
@@ -296,21 +322,21 @@ function buildEntryRecord(){
 function saveEntry(){
  let r=buildEntryRecord();if(!r)return;
  // 先驗證完成，再回沖舊紀錄，避免修改失敗時餘額被動到。
- if(editIndex!==null)applyRecord(data.records[editIndex],-1);
+ if(editIndex!==null){if(settledIds().has(data.records[editIndex].id))return alert('已結算項目不可修改');r.id=data.records[editIndex].id;applyRecord(data.records[editIndex],-1);}
  applyRecord(r,1);
  if(editIndex===null)data.records.push(r);else data.records[editIndex]=r;
  closeEntry();persist()
 }
 function editRecord(i){
- let r=data.records[i];editIndex=i;entryTitle.textContent='修改紀錄';entryModal.classList.add('on');setType(r.type);amount.value=r.amount;date.value=r.date;
+ let r=data.records[i];if(settledIds().has(r.id))return alert('已結算項目不可修改');editIndex=i;entryTitle.textContent='修改紀錄';entryModal.classList.add('on');setType(r.type);amount.value=r.amount;date.value=r.date;
  if(r.type==='transfer'){fromWallet.value=r.from;toWallet.value=r.to}
  else{wallet.value=r.wallet;toggleReserve();reserveItem.value=r.reserveItem||'';paymentMethod.value=r.paymentMethod||'account';memo.value=r.memo||''}
 }
-function deleteRecord(i){if(!confirm('確定刪除這筆紀錄？若這筆有影響帳戶餘額，也會自動還原。'))return;applyRecord(data.records[i],-1);data.records.splice(i,1);persist()}
+function deleteRecord(i){if(settledIds().has(data.records[i]?.id))return alert('已結算項目不可刪除');if(!confirm('確定刪除這筆紀錄？若這筆有影響帳戶餘額，也會自動還原。'))return;applyRecord(data.records[i],-1);data.records.splice(i,1);persist()}
 function saveActual(){data.bankActual=+bankActual.value||0;persist();alert('已更新')}
 function backup(){let b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='宣的專款帳本備份-'+localISODate()+'.json';a.click()}
-function restore(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{data=migrate(JSON.parse(r.result));persist();alert('已還原')}catch{alert('備份檔格式不正確')}};r.readAsText(f)}
+function restore(e){let f=e.target.files[0];if(!f)return;if(!confirm('匯入備份將取代目前網頁內的資料，請先確認已匯出目前資料。確定繼續？'))return;let r=new FileReader();r.onload=()=>{try{data=migrate(JSON.parse(r.result));ensureSettlementIds();selectedSettlementIds.clear();persist();alert('已還原')}catch{alert('備份檔格式不正確')}};r.readAsText(f)}
 function resetAll(){if(confirm('確定重設？目前裝置上的帳目會被起始資料取代。')){data=clone(seed);persist()}}
-viewMonth.value=currentMonth();rangeStart.value=currentMonth()+'-01';rangeEnd.value=localISODate();render();
+viewMonth.value=currentMonth();rangeStart.value=currentMonth()+'-01';rangeEnd.value=localISODate();creditViewMonth.value=currentMonth();settleCutoff.value=localISODate();ensureSettlementIds();localStorage.setItem(KEY,JSON.stringify(data));render();
 </script></body></html>
 <style>.navin{grid-template-columns:repeat(7,1fr)!important}.nav button{font-size:12px!important;padding-left:2px!important;padding-right:2px!important}</style>
